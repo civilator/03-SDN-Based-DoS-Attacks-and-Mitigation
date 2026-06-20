@@ -5,7 +5,7 @@ from pox.lib.util import dpidToStr
 from pox.lib.addresses import EthAddr
 from collections import namedtuple
 import os
-''' New imports here ... '''
+
 import csv
 import argparse
 from pox.lib.packet.ethernet import ethernet, ETHER_BROADCAST
@@ -30,18 +30,11 @@ class Firewall (EventMixin):
 		self.fwconfig = list()
 
 		# ------------------------------------------------------------------
-		# Cuneyt Terzi: PORT SECURITY state
-		#   portTable   : maps a source MAC -> set() of source IPs seen from it
-		#   blockedMACs : MACs we have already blocked (act only once each)
-		#   maxIPsPerMAC: IPs allowed per MAC; a 2nd distinct IP = spoofing
-		# ------------------------------------------------------------------
+		# PORT SECURITY lists and option
 		self.portTable    = {}
 		self.blockedMACs  = set()
 		self.maxIPsPerMAC = 1
 
-		'''
-		Read the CSV file
-		'''
 		if l2config == "":
 			l2config = "l2firewall.config"
 
@@ -51,7 +44,7 @@ class Firewall (EventMixin):
 		with open(l2config, 'rb') as rules:
 			csvreader = csv.DictReader(rules) # Map into a dictionary
 			for line in csvreader:
-				# Read MAC address. Convert string to Ethernet address using the EthAddr() function.
+				# read MAC address
 				if line['mac_0'] != 'any':
 					mac_0 = EthAddr(line['mac_0'])
 				else:
@@ -61,7 +54,7 @@ class Firewall (EventMixin):
 					mac_1 = EthAddr(line['mac_1'])
 				else:
 					mac_1 = None
-				# Append to the array storing all MAC pair.
+				# add pair to pair list 
 				self.disabled_MAC_pair.append((mac_0, mac_1))
 
 		with open(l3config) as csvfile:
@@ -73,7 +66,7 @@ class Firewall (EventMixin):
 				d_ip = row['dst_ip']
 				s_port = row['src_port']
 				d_port = row['dst_port']
-				print "src_ip, dst_ip, src_port, dst_port", s_ip, d_ip, s_port, d_port
+				print ("src_ip, dst_ip, src_port, dst_port", s_ip, d_ip, s_port, d_port)
 
 		log.debug("Enabling Firewall Module")
 
@@ -118,12 +111,9 @@ class Firewall (EventMixin):
 		msg.priority = priority + offset
 		event.connection.send(msg)
 
-	# ----------------------------------------------------------------------
-	# Cuneyt Terzi: PORT SECURITY core
-	# Implements the Task 3.0 pseudocode (one MAC <-> one IP).
-	# Returns True if the source MAC is (or has just become) blocked, so the
-	# caller can stop processing that packet.
-	# ----------------------------------------------------------------------
+	
+	# Cuneyt Terzi: the Task 3.0 pseudocode (one MAC <-> one IP).
+	# Returns True if the source MAC is blocked
 	def portSecurity(self, match, event):
 		# Only inspect IP packets (they carry a source IP we can check).
 		if match.dl_type != pkt.ethernet.IP_TYPE:
@@ -134,29 +124,26 @@ class Firewall (EventMixin):
 		src_mac = str(match.dl_src)
 		src_ip  = str(match.nw_src)
 
-		# Already a known attacker -> drop silently.
+		# if attacjer is already in the list, drop packet
 		if src_mac in self.blockedMACs:
 			return True
 
-		# Learn / update the MAC -> IP mapping (the port table PT).
+		# add the ip info to the list
 		seen_ips = self.portTable.setdefault(src_mac, set())
 		if src_ip not in seen_ips:
 			seen_ips.add(src_ip)
 			log.debug("PORT SECURITY: MAC %s now maps to IPs %s",
 					  src_mac, list(seen_ips))
 
-		# Same MAC, more than one source IP => spoofing => block.
+		# if more then one ip, block the mac address and also drop
 		if len(seen_ips) > self.maxIPsPerMAC:
 			self.blockMAC(src_mac, event)
 			return True
 
 		return False
 
-	# ----------------------------------------------------------------------
-	# Cuneyt Terzi: block a spoofing MAC.
-	# Installs a top-priority drop flow (no actions = drop) on the switch and
-	# persists the block to l2firewall.config so it survives a reload.
-	# ----------------------------------------------------------------------
+	
+	# Cuneyt Terzi: block a spoofing attempt by adding a rule to l2firewall.config with top priority
 	def blockMAC(self, src_mac, event):
 		log.warning("PORT SECURITY: BLOCKING spoofing MAC %s (used %d IPs)",
 					src_mac, len(self.portTable.get(src_mac, set())))
@@ -171,7 +158,7 @@ class Firewall (EventMixin):
 
 		self.blockedMACs.add(src_mac)
 
-		# Persist to l2firewall.config -> id,mac_0,mac_1 (mac_1 'any' = any dest).
+		# write to l2firewall.config -> id,mac_0,mac_1 (mac_1 'any' = any dest).
 		try:
 			with open(l2config, 'a') as fh:
 				fh.write("100,%s,any\n" % src_mac)
@@ -221,17 +208,12 @@ class Firewall (EventMixin):
 		self.allowOther(event)
 
 	def _handle_ConnectionUp (self, event):
-		''' Add your logic here ... '''
-
-		'''
-		Iterate through the disabled_MAC_pair array, and for each
-		pair we install a rule in each OpenFlow switch
-		'''
+	 
 		self.connection = event.connection
 
 		for (source, destination) in self.disabled_MAC_pair:
 
-			print source, destination
+			print (source, destination)
 			message = of.ofp_flow_mod() # OpenFlow message. Instructs a switch to install a flow
 			match = of.ofp_match() # Create a match
 			match.dl_src = source # Source address
@@ -254,15 +236,15 @@ class Firewall (EventMixin):
 
 		if(match.dl_type == packet.IP_TYPE):
 
-			# Cuneyt Terzi: run port security first. If this MAC is spoofing
-			# multiple IPs, it gets blocked and we stop processing the packet.
+			# Cuneyt Terzi: check with port security 
+			# packet blocked if mac matches more than one IPs
 			if self.portSecurity(match, event):
 				return
 
 			ip_packet = packet.payload
-			print "Ip_packet.protocol = ", ip_packet.protocol
+			print ("Ip_packet.protocol = ", ip_packet.protocol)
 			if ip_packet.protocol == ip_packet.TCP_PROTOCOL:
-				log.debug("TCP it is !")
+				log.debug("TCP")
 
 			self.replyToIP(packet, match, event, self.rules)
 
