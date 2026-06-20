@@ -26,7 +26,7 @@ class Firewall (EventMixin):
 
 	def __init__ (self,l2config,l3config):
 		self.listenTo(core.openflow)
-		self.disbaled_MAC_pair = [] # Store a tuple of MAC pair which will be installed into the flow table of each switch.
+		self.disabled_MAC_pair = [] # Store a tuple of MAC pair which will be installed into the flow table of each switch.
 		self.fwconfig = list()
 
 		# ------------------------------------------------------------------
@@ -62,7 +62,7 @@ class Firewall (EventMixin):
 				else:
 					mac_1 = None
 				# Append to the array storing all MAC pair.
-				self.disbaled_MAC_pair.append((mac_0, mac_1))
+				self.disabled_MAC_pair.append((mac_0, mac_1))
 
 		with open(l3config) as csvfile:
 			log.debug("Reading log file !")
@@ -224,12 +224,12 @@ class Firewall (EventMixin):
 		''' Add your logic here ... '''
 
 		'''
-		Iterate through the disbaled_MAC_pair array, and for each
+		Iterate through the disabled_MAC_pair array, and for each
 		pair we install a rule in each OpenFlow switch
 		'''
 		self.connection = event.connection
 
-		for (source, destination) in self.disbaled_MAC_pair:
+		for (source, destination) in self.disabled_MAC_pair:
 
 			print source, destination
 			message = of.ofp_flow_mod() # OpenFlow message. Instructs a switch to install a flow
