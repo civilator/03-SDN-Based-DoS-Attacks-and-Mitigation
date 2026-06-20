@@ -1,22 +1,3 @@
-#!/usr/bin/env python3
-# mininet_topo.py
-# CSE 548 - SDN-Based DoS Attacks and Mitigation (Project 3)
-# Plain Mininet topology (4 hosts, 1 OVS switch, 1 remote controller).
-# Reused from Project 2 with fixed MAC addresses added so the firewall
-# configs and the assignment's MAC<->IP table stay consistent.
-#
-#   Host  IP               MAC                 role
-#   h1    192.168.2.10/24  00:00:00:00:00:01   attacker
-#   h2    192.168.2.20/24  00:00:00:00:00:02   victim
-#   h3    192.168.2.30/24  00:00:00:00:00:03
-#   h4    192.168.2.40/24  00:00:00:00:00:04
-#
-# Run order:
-#   Terminal 1:  cd ~/pox && sudo ./pox.py openflow.of_01 --port=6655 \
-#                   forwarding.l3_learning pox.forwarding.L3Firewall \
-#                   --l2config=l2firewall.config --l3config=l3firewall.config
-#   Terminal 2:  sudo python3 mininet_topo.py
-
 from mininet.net import Mininet
 from mininet.node import RemoteController, OVSKernelSwitch
 from mininet.cli import CLI
