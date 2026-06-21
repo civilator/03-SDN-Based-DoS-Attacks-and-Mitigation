@@ -41,7 +41,7 @@ class Firewall (EventMixin):
 		if l3config == "":
 			l3config = "l3firewall.config"
 
-		with open(l2config, 'rb') as rules:
+		with open(l2config, 'r') as rules:
 			csvreader = csv.DictReader(rules) # Map into a dictionary
 			for line in csvreader:
 				# read MAC address
@@ -58,17 +58,17 @@ class Firewall (EventMixin):
 				self.disabled_MAC_pair.append((mac_0, mac_1))
 
 		with open(l3config) as csvfile:
-			log.debug("Reading log file !")
+			print("Reading log file !")
 			self.rules = csv.DictReader(csvfile)
 			for row in self.rules:
-				log.debug("Saving individual rule parameters in rule dict !")
+				print("Saving individual rule parameters in rule dict !")
 				s_ip = row['src_ip']
 				d_ip = row['dst_ip']
 				s_port = row['src_port']
 				d_port = row['dst_port']
 				print ("src_ip, dst_ip, src_port, dst_port", s_ip, d_ip, s_port, d_port)
 
-		log.debug("Enabling Firewall Module")
+		print("Enabling Firewall Module")
 
 	def replyToARP(self, packet, match, event):
 		r = arp()
@@ -132,7 +132,7 @@ class Firewall (EventMixin):
 		seen_ips = self.portTable.setdefault(src_mac, set())
 		if src_ip not in seen_ips:
 			seen_ips.add(src_ip)
-			log.debug("PORT SECURITY: MAC %s now maps to IPs %s",
+			print("PORT SECURITY: MAC %s now maps to IPs %s",
 					  src_mac, list(seen_ips))
 
 		# if more then one ip, block the mac address and also drop
@@ -163,7 +163,7 @@ class Firewall (EventMixin):
 			with open(l2config, 'a') as fh:
 				fh.write("100,%s,any\n" % src_mac)
 		except Exception as err:
-			log.debug("PORT SECURITY: could not write l2firewall.config: %s", err)
+			print("PORT SECURITY: could not write l2firewall.config: %s", err)
 
 	def replyToIP(self, packet, match, event, fwconfig):
 		srcmac = str(match.dl_src)
@@ -173,7 +173,7 @@ class Firewall (EventMixin):
 		nwproto = str(match.nw_proto)
 
 		with open(l3config) as csvfile:
-			log.debug("Reading log file !")
+			print("Reading log file !")
 			self.rules = csv.DictReader(csvfile)
 			for row in self.rules:
 				prio = row['priority']
@@ -185,7 +185,7 @@ class Firewall (EventMixin):
 				d_port = row['dst_port']
 				nw_proto = row['nw_proto']
 
-				log.debug("You are in original code block ...")
+				print("You are in original code block ...")
 				srcmac1 = EthAddr(srcmac) if srcmac != 'any' else None
 				dstmac1 = EthAddr(dstmac) if dstmac != 'any' else None
 				s_ip1 = s_ip if s_ip != 'any' else None
@@ -202,7 +202,7 @@ class Firewall (EventMixin):
 				elif nw_proto == "udp":
 					nw_proto1 = pkt.ipv4.UDP_PROTOCOL
 				else:
-					log.debug("PROTOCOL field is mandatory, Choose between ICMP, TCP, UDP")
+					print("PROTOCOL field is mandatory, Choose between ICMP, TCP, UDP")
 				print (prio1, s_ip1, d_ip1, s_port1, d_port1, nw_proto1)
 				self.installFlow(event, prio1, srcmac1, dstmac1, s_ip1, d_ip1, s_port1, d_port1, nw_proto1)
 		self.allowOther(event)
@@ -223,7 +223,7 @@ class Firewall (EventMixin):
 			message.match = match
 			event.connection.send(message) # Send instruction to the switch
 
-		log.debug("Firewall rules installed on %s", dpidToStr(event.dpid))
+		print("Firewall rules installed on %s", dpidToStr(event.dpid))
 
 	def _handle_PacketIn(self, event):
 
@@ -244,7 +244,7 @@ class Firewall (EventMixin):
 			ip_packet = packet.payload
 			print ("Ip_packet.protocol = ", ip_packet.protocol)
 			if ip_packet.protocol == ip_packet.TCP_PROTOCOL:
-				log.debug("TCP")
+				print("TCP")
 
 			self.replyToIP(packet, match, event, self.rules)
 
