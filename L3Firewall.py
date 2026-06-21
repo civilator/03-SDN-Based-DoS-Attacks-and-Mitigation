@@ -255,7 +255,7 @@ class Firewall (EventMixin):
 			if ip_packet.protocol == ip_packet.TCP_PROTOCOL:
 				print("TCP")
 
-			self.replyToIP(packet, match, event, self.rules)
+			# self.replyToIP(packet, match, event, self.rules)
 
 
 def launch (l2config="l2firewall.config", l3config="l3firewall.config"):
