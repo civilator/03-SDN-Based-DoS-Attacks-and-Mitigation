@@ -93,6 +93,8 @@ class Firewall (EventMixin):
 		event.connection.send(msg)
 
 	def installFlow(self, event, offset, srcmac, dstmac, srcip, dstip, sport, dport, nwproto):
+		print("Entering installFlow")
+
 		msg = of.ofp_flow_mod()
 		match = of.ofp_match()
 		if(srcip != None):
@@ -115,6 +117,8 @@ class Firewall (EventMixin):
 	# Cuneyt Terzi: the Task 3.0 pseudocode (one MAC <-> one IP).
 	# Returns True if the source MAC is blocked
 	def portSecurity(self, match, event):
+		print("Entering portSecurity")
+
 		# Only inspect IP packets (they carry a source IP we can check).
 		if match.dl_type != pkt.ethernet.IP_TYPE:
 			return False
@@ -137,6 +141,8 @@ class Firewall (EventMixin):
 
 		# if more then one ip, block the mac address and also drop
 		if len(seen_ips) > self.maxIPsPerMAC:
+			print("Entering portSecurity")
+			
 			self.blockMAC(src_mac, event)
 			return True
 
@@ -239,6 +245,7 @@ class Firewall (EventMixin):
 			# Cuneyt Terzi: check with port security 
 			# packet blocked if mac matches more than one IPs
 			if self.portSecurity(match, event):
+				print("PORT SECURITY: BLOCKING spoofing MAC %s (used %d IPs)")
 				return
 
 			ip_packet = packet.payload
@@ -253,6 +260,7 @@ def launch (l2config="l2firewall.config", l3config="l3firewall.config"):
 	'''
 	Starting the Firewall module
 	'''
+	print("Starting the Firewall module with l2config: %s and l3config: %s" % (l2config, l3config))
 	parser = argparse.ArgumentParser()
 	parser.add_argument('--l2config', action='store', dest='l2config',
 						help='Layer 2 config file', default='l2firewall.config')
