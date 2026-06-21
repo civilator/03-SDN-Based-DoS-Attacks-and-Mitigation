@@ -141,8 +141,8 @@ class Firewall (EventMixin):
 
 		# if more then one ip, block the mac address and also drop
 		if len(seen_ips) > self.maxIPsPerMAC:
-			print("Entering portSecurity")
 			
+			print("Blocking MAC %s (used %d IPs)", src_mac, len(seen_ips))
 			self.blockMAC(src_mac, event)
 			return True
 
@@ -151,7 +151,7 @@ class Firewall (EventMixin):
 	
 	# Cuneyt Terzi: block a spoofing attempt by adding a rule to l2firewall.config with top priority
 	def blockMAC(self, src_mac, event):
-		log.warning("PORT SECURITY: BLOCKING spoofing MAC %s (used %d IPs)",
+		print("PORT SECURITY: BLOCKING spoofing MAC %s (used %d IPs)",
 					src_mac, len(self.portTable.get(src_mac, set())))
 
 		msg = of.ofp_flow_mod()
@@ -161,10 +161,11 @@ class Firewall (EventMixin):
 		msg.priority = 65535          # highest priority
 		# No actions appended => the switch drops matching packets.
 		event.connection.send(msg)
-
+		print("Adding MAC %s to blockedMACs set", src_mac)
 		self.blockedMACs.add(src_mac)
 
 		# write to l2firewall.config -> id,mac_0,mac_1 (mac_1 'any' = any dest).
+		print("Writing to l2firewall.config: 100,%s,any", src_mac)
 		try:
 			with open(l2config, 'a') as fh:
 				fh.write("100,%s,any\n" % src_mac)
@@ -232,10 +233,11 @@ class Firewall (EventMixin):
 		print("Firewall rules installed on %s", dpidToStr(event.dpid))
 
 	def _handle_PacketIn(self, event):
+		print("Entering _handle_PacketIn")
 
 		packet = event.parsed
 		match = of.ofp_match.from_packet(packet)
-
+		print("PacketIn: %s" % (match,))
 		if(match.dl_type == packet.ARP_TYPE and match.nw_proto == arp.REQUEST):
 
 			self.replyToARP(packet, match, event)
