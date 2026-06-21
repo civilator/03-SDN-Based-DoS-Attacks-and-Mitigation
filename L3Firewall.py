@@ -58,7 +58,7 @@ class Firewall (EventMixin):
 				self.disabled_MAC_pair.append((mac_0, mac_1))
 
 		with open(l3config) as csvfile:
-			print("Reading log file !")
+			print("Reading l3config file in __init__ ")
 			self.rules = csv.DictReader(csvfile)
 			for row in self.rules:
 				print("Saving individual rule parameters in rule dict !")
@@ -180,7 +180,7 @@ class Firewall (EventMixin):
 		nwproto = str(match.nw_proto)
 
 		with open(l3config) as csvfile:
-			print("Reading log file !")
+			print("Reading l3config file in replyToIP")
 			self.rules = csv.DictReader(csvfile)
 			for row in self.rules:
 				prio = row['priority']
